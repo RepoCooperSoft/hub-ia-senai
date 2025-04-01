@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Velha com MinMax</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+        }
+
+        #tabuleiro {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            margin: 20px 0;
+        }
+
+        .celula {
+            width: 100px;
+            height: 100px;
+            background-color: #f0f0f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        .celula:hover {
+            background-color: #e0e0e0;
+        }
+
+        #mensagem {
+            margin: 20px 0;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .escolha-jogador {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Jogo da Velha com IA</h1>
+    <div class="escolha-jogador">
+        <p>Escolha com qual símbolo deseja jogar:</p>
+        <button onclick="iniciarJogo('X')">Jogar como X (primeiro)</button>
+        <button onclick="iniciarJogo('O')">Jogar como O (segundo)</button>
+    </div>
+    <div id="mensagem"></div>
+    <div id="tabuleiro"></div>
+    <button id="reiniciar" onclick="resetarJogo()" style="display: none;">Reiniciar Jogo</button>
+
+    <script>
+        const tabuleiroElemento = document.getElementById('tabuleiro');
+        const mensagemElemento = document.getElementById('mensagem');
+        const botaoReiniciar = document.getElementById('reiniciar');
+
+        let estadoJogo = ['', '', '', '', '', '', '', '', ''];
+        let jogadorHumano = '';
+        let jogadorAtual = '';
+        let jogoAtivo = false;
+
+        // Inicialização do tabuleiro
+        function criarTabuleiro() {
+            tabuleiroElemento.innerHTML = '';
+            for (let i = 0; i < 9; i++) {
+                const celula = document.createElement('div');
+                celula.classList.add('celula');
+                celula.dataset.index = i;
+                celula.addEventListener('click', tratarClique);
+                tabuleiroElemento.appendChild(celula);
+            }
+        }
+
+        // Inicia o jogo com o jogador escolhido
+        function iniciarJogo(jogador) {
+            jogadorHumano = jogador;
+            jogadorAtual = 'X'; // X sempre começa
+            jogoAtivo = true;
+            document.querySelector('.escolha-jogador').style.display = 'none';
+            botaoReiniciar.style.display = 'block';
+
+            criarTabuleiro();
+            atualizarMensagem();
+
+            // Se o script começar primeiro
+            if (jogadorHumano === 'O') {
+                setTimeout(jogarIA, 500);
+            }
+        }
+
+        // Atualiza a mensagem de status
+        function atualizarMensagem() {
+            if (!jogoAtivo) return;
+
+            if (verificarVitoria('X')) {
+                mensagemElemento.textContent = jogadorHumano === 'X' ? 'Você venceu!' : 'IA (X) venceu!';
+                jogoAtivo = false;
+            } else if (verificarVitoria('O')) {
+                mensagemElemento.textContent = jogadorHumano === 'O' ? 'Você venceu!' : 'IA (O) venceu!';
+                jogoAtivo = false;
+            } else if (tabuleiroCheio()) {
+                mensagemElemento.textContent = 'Empate!';
+                jogoAtivo = false;
+            } else {
+                mensagemElemento.textContent = jogadorAtual === jogadorHumano ?
+                    'Sua vez!' : 'IA está pensando...';
+            }
+        }
+
+        // Manipulador de clique na célula
+        function tratarClique(event) {
+            if (!jogoAtivo || jogadorAtual !== jogadorHumano) return;
+
+            const indice = event.target.dataset.index;
+            if (estadoJogo[indice] === '') {
+                estadoJogo[indice] = jogadorHumano;
+                event.target.textContent = jogadorHumano;
+                jogadorAtual = jogadorHumano === 'X' ? 'O' : 'X';
+
+                atualizarMensagem();
+
+                if (jogoAtivo) {
+                    setTimeout(jogarIA, 500);
+                }
+            }
+        }
+
+        // IA (Minimax)
+        function jogarIA() {
+            if (!jogoAtivo || jogadorAtual === jogadorHumano) return;
+
+            let melhorPontuacao = -Infinity;
+            let melhorJogada;
+
+            // Encontra a melhor jogada
+            for (let i = 0; i < 9; i++) {
+                if (estadoJogo[i] === '') {
+                    estadoJogo[i] = jogadorAtual;
+                    let pontuacao = minimax(estadoJogo, 0, false);
+                    estadoJogo[i] = '';
+
+                    if (pontuacao > melhorPontuacao) {
+                        melhorPontuacao = pontuacao;
+                        melhorJogada = i;
+                    }
+                }
+            }
+
+            // Executa a melhor jogada
+            estadoJogo[melhorJogada] = jogadorAtual;
+            document.querySelector(`[data-index="${melhorJogada}"]`).textContent = jogadorAtual;
+            jogadorAtual = jogadorAtual === 'X' ? 'O' : 'X';
+
+            atualizarMensagem();
+        }
+
+        // Algoritmo Minimax
+        function minimax(estado, profundidade, ehMaximizando) {
+            const iaJogador = jogadorHumano === 'X' ? 'O' : 'X';
+            const humanoJogador = jogadorHumano;
+
+            // Verifica se alguém ganhou
+            if (verificarVitoria(iaJogador)) {
+                return 10 - profundidade;
+            } else if (verificarVitoria(humanoJogador)) {
+                return profundidade - 10;
+            } else if (tabuleiroCheio()) {
+                return 0;
+            }
+
+            if (ehMaximizando) {
+                let melhorPontuacao = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (estado[i] === '') {
+                        estado[i] = iaJogador;
+                        let pontuacao = minimax(estado, profundidade + 1, false);
+                        estado[i] = '';
+                        melhorPontuacao = Math.max(pontuacao, melhorPontuacao);
+                    }
+                }
+                return melhorPontuacao;
+            } else {
+                let piorPontuacao = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (estado[i] === '') {
+                        estado[i] = humanoJogador;
+                        let pontuacao = minimax(estado, profundidade + 1, true);
+                        estado[i] = '';
+                        piorPontuacao = Math.min(pontuacao, piorPontuacao);
+                    }
+                }
+                return piorPontuacao;
+            }
+        }
+
+        // Funções auxiliares
+        function verificarVitoria(jogador) {
+            const linhas = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Linhas
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Colunas
+                [0, 4, 8], [2, 4, 6]             // Diagonais
+            ];
+
+            return linhas.some(linha => {
+                return linha.every(indice => estadoJogo[indice] === jogador);
+            });
+        }
+
+        function tabuleiroCheio() {
+            return !estadoJogo.includes('');
+        }
+
+        function resetarJogo() {
+            estadoJogo = ['', '', '', '', '', '', '', '', ''];
+            jogadorAtual = 'X';
+            jogoAtivo = true;
+            mensagemElemento.textContent = '';
+            criarTabuleiro();
+
+            // Se a IA começar primeiro
+            if (jogadorHumano === 'O') {
+                setTimeout(jogarIA, 500);
+            } else {
+                atualizarMensagem();
+            }
+        }
+        // Inicializa o jogo
+        criarTabuleiro();
+    </script>
+</body>
+</html>
