@@ -58,7 +58,7 @@ O programa gera um arquivo `.opt.tour` com:
 ## ⚡ Dicas
 
 - Para problemas grandes (>500 cidades), aumente `ITERATIONS` e `ANTS`
-- Ajuste `ALPHA` e `BETA` para balancear entre exploração e explotação
+- Ajuste `ALPHA` e `BETA` para balancear entre exploração e exploração
 - Arquivos de teste podem ser baixados em: [TSPLIB](http://comopt.ifi.uni-heidelberg.de/software/TSPLIB95/tsp/)
 
 ## 📄 Licença
